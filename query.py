@@ -103,6 +103,23 @@ def arg_bound(df, arg):
     else:
         return True
 
+def resolve_args(df, args):
+    unbound = [arg.value() for arg in args if arg.value() not in df]
+    if unbound:
+        raise Exception("Unbound variables: %s" % ', '.join(unbound))
+    return df.rename(columns={arg.value(): i for i, arg in enumerate(args)})[range(len(args))]
+
+def resolve_kwargs(df, kwargs):
+    # Check for queryable keys
+    available = {k: v for k, v in kwargs.items() if arg_bound(df, v)}
+    # Rename variable names
+    output = df.rename(columns={arg.value(): k for k, arg in available.items() if arg.is_var()})
+    # Add constant values
+    output = output.assign(**{k: arg.value() for k, arg in available.items() if not arg.is_var()})
+    # Filter out unnecessary info
+    output = output[available.keys()]
+    return output
+
 def join(df1, df2, kwargs, anti=False):
     # outside keys
     df1 = df1.assign(key=0)
@@ -114,9 +131,10 @@ def join(df1, df2, kwargs, anti=False):
     # Add consts
     consts = {m[0]: m[1].value() for m in kwargs.items() if not m[1].is_var()}
     df1 = df1.assign(**consts)
+    available_consts = [c for c in consts.keys() if c in df1 and c in df2]
 
-    left_keys = [m[1].value() for m in existing_keys if m[1].is_var()] + ["key"] + list(consts.keys())
-    right_keys = [m[0] for m in existing_keys] + ["key"] + list(consts.keys())
+    left_keys = [m[1].value() for m in existing_keys if m[1].is_var()] + ["key"] + list(available_consts)
+    right_keys = [m[0] for m in existing_keys] + ["key"] + list(available_consts)
 
     if anti:
         # Anti join
@@ -151,15 +169,7 @@ def queryable(query_keys=None, available_keys=None, query=None, args=None):
         if unknown_args:
             raise Exception("Unknown args: %s" % ', '.join(unknown_args))
 
-        # Check for queryable keys
-        available = {k: v for k, v in kwargs.items() if arg_bound(df, v) and k in query_keys}
-        # Rename variable names
-        qdf = df.rename(columns={arg.value(): k for k, arg in available.items() if arg.is_var()})
-        # Add constant values
-        qdf = qdf.assign(**{k: arg.value() for k, arg in available.items() if not arg.is_var()})
-        # Filter out unnecessary info
-        qdf = qdf[available.keys()]
-
+        qdf = resolve_kwargs(df, kwargs)
         result = query(qdf)
 
         return join(df, result, kwargs, anti=neg)
@@ -208,6 +218,18 @@ add_operator("eq", filter_op(lambda x, y: x == y))
 add_operator("neq", filter_op(lambda x, y: x == y))
 add_operator("gt", filter_op(lambda x, y: float(x) > float(y)))
 
+def csv_op(neg, df, *args, **kwargs):
+    print(resolve_args(df, args).to_csv(header=False, index=False))
+    return df
+
+add_operator("csv", csv_op)
+
+def print_op(neg, df, *args, **kwargs):
+    print(df)
+    return df
+
+add_operator("print", print_op)
+
 def main(query_string, input_file=None):
     q = query.parseString(query_string)
 
@@ -237,8 +259,6 @@ def main(query_string, input_file=None):
         if not operator:
             raise Exception("Can't find operator named '%s'" % part.identifier)
         df = operator(negated, df, *pargs, **kwargs)
-
-    print(df)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse some thangs")
