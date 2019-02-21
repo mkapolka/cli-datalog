@@ -1,8 +1,7 @@
 import pandas as pd
-import argparse
 import re
 
-from parsing import query
+from .parsing import query
 
 DB1 = pd.DataFrame([
     {
@@ -58,9 +57,6 @@ operators = {}
 
 def add_operator(name, f):
     operators[name] = f
-
-def simple_query(db):
-    pass
 
 class Var(object):
     def __init__(self, value):
@@ -157,7 +153,6 @@ def join(df1, df2, kwargs, anti=False):
     output = output[cols]
     return output
 
-
 def queryable(query_keys=None, available_keys=None, query=None, args=None):
     static_args = args
     def op(neg, df, *args, **kwargs):
@@ -212,62 +207,20 @@ def filter_op(f):
         return df[take]
     return op
 
-add_operator("db1", join_op(DB1))
-add_operator("db2", join_op(DB2))
-add_operator("eq", filter_op(lambda x, y: x == y))
-add_operator("neq", filter_op(lambda x, y: x == y))
-add_operator("gt", filter_op(lambda x, y: float(x) > float(y)))
-
 def csv_op(neg, df, *args, **kwargs):
     print(resolve_args(df, args).to_csv(header=False, index=False))
     return df
-
-add_operator("csv", csv_op)
 
 def print_op(neg, df, *args, **kwargs):
     print(df)
     return df
 
-add_operator("print", print_op)
-
-def main(query_string, input_file=None):
-    q = query.parseString(query_string)
-
-    INPUT = pd.DataFrame(dtype=str)
-    if input_file is not None:
-        with open(input_file, 'r') as f:
-            lines = [f.strip().split(",") for f in f.readlines()]
-            columns = [str(x) for x in range(len(lines[0]))]
-            INPUT = pd.DataFrame(lines, columns=columns, dtype=str)
-
-    add_operator("input", join_op(INPUT))
-
-    df = pd.DataFrame([{"key": 0}])
-
-    def get_atom(atom):
-        if atom.var:
-            return Var(atom.var)
-        if atom.const:
-            return Const(atom.const)
-
-    for part in q.parts:
-        pargs = [get_atom(a.parg.atom) for a in part.mappings if a.parg]
-        kwargs = {a.kwarg.name: get_atom(a.kwarg.value) for a in part.mappings if a.kwarg}
-        negated = bool(part.negated)
-
-        operator = operators.get(part.identifier, None)
-        if not operator:
-            raise Exception("Can't find operator named '%s'" % part.identifier)
-        df = operator(negated, df, *pargs, **kwargs)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Parse some thangs")
-    parser.add_argument("query", type=str, help="Query string.")
-    parser.add_argument("--input", type=str, help="Input file. Format as CSV and it'll be available as input()s")
-
-    # Mixin the twitch operators
-    from twitch import get_operators
-    for n, f in get_operators().items():
-        add_operator(n, f)
-    args = parser.parse_args()
-    main(args.query, args.input)
+DEFAULT_OPERATORS = {
+    "print": print_op,
+    "db1": join_op(DB1),
+    "db2": join_op(DB2),
+    "eq": filter_op(lambda x, y: x == y),
+    "neq": filter_op(lambda x, y: x == y),
+    "gt": filter_op(lambda x, y: float(x) > float(y)),
+    "csv": csv_op,
+}
