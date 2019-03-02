@@ -1,7 +1,9 @@
 # Entry point helpers
 import argparse
+import pandas as pd
 
-from .query import DEFAULT_OPERATORS
+from .query import DEFAULT_OPERATORS, join_op, Var, Const
+from .parsing import query
 
 class Main(object):
     def __init__(self):
@@ -30,7 +32,7 @@ class Main(object):
                 columns = [str(x) for x in range(len(lines[0]))]
                 INPUT = pd.DataFrame(lines, columns=columns, dtype=str)
 
-        add_operator("input", join_op(INPUT))
+        self.add_predicate("input", join_op(INPUT))
 
         df = pd.DataFrame([{"key": 0}])
 
@@ -45,7 +47,7 @@ class Main(object):
             kwargs = {a.kwarg.name: get_atom(a.kwarg.value) for a in part.mappings if a.kwarg}
             negated = bool(part.negated)
 
-            operator = operators.get(part.identifier, None)
+            operator = self.predicates.get(part.identifier, None)
             if not operator:
                 raise Exception("Can't find operator named '%s'" % part.identifier)
             df = operator(negated, df, *pargs, **kwargs)

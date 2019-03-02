@@ -55,9 +55,6 @@ DB2 = pd.DataFrame([
 
 operators = {}
 
-def add_operator(name, f):
-    operators[name] = f
-
 class Var(object):
     def __init__(self, value):
         self._value = str(value)
