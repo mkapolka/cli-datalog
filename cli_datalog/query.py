@@ -3,56 +3,6 @@ import re
 
 from .parsing import query
 
-DB1 = pd.DataFrame([
-    {
-        "uuid": "qwer",
-        "tid": "123",
-        "maturity": "false",
-    },{
-        "uuid": "asdf",
-        "tid": "234",
-        "maturity": "true",
-    },{
-        "uuid": "zxcv",
-        "tid": "456",
-        "maturity": "false",
-    },{
-        "uuid": "lkj",
-        "tid": "567",
-        "maturity": "true",
-    },{
-        "uuid": "poiu",
-        "tid": "678",
-        "maturity": "false",
-    },{
-        "uuid": "not in db2",
-        "tid": "61612",
-        "maturity": "true",
-    },
-])
-
-DB2 = pd.DataFrame([
-    {
-        "tid": "123",
-        "name": "gooba",
-        "username": "mkapolka",
-    },{
-        "tid": "234",
-        "name": "snard",
-        "username": "superemily",
-    },{
-        "tid": "456",
-        "name": "hi",
-        "username": "iateyourpie",
-    },{
-        "tid": "567",
-        "name": "booga",
-    },{
-        "tid": "678",
-        "name": "ooofffaa",
-    },
-])
-
 operators = {}
 
 class Var(object):
@@ -118,6 +68,8 @@ def join(df1, df2, kwargs, anti=False):
     df1 = df1.assign(key=0)
     df2 = df2.assign(key=0)
 
+    old_keys = df1.keys()
+
     # Existing keys
     existing_keys = [m for m in kwargs.items() if m[1].is_var() and m[1].value() in df1.keys()]
 
@@ -146,7 +98,7 @@ def join(df1, df2, kwargs, anti=False):
 
     # Filter out unused vars
     var_names = [m.value() for m in kwargs.values() if m.is_var()]
-    cols = set(list(df1.keys()) + var_names)
+    cols = set(list(old_keys) + var_names)
     output = output[cols]
     return output
 
@@ -214,8 +166,6 @@ def print_op(neg, df, *args, **kwargs):
 
 DEFAULT_OPERATORS = {
     "print": print_op,
-    "db1": join_op(DB1),
-    "db2": join_op(DB2),
     "eq": filter_op(lambda x, y: x == y),
     "neq": filter_op(lambda x, y: x == y),
     "gt": filter_op(lambda x, y: float(x) > float(y)),
