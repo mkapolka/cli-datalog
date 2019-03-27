@@ -4,7 +4,7 @@ from pyparsing import (
     pyparsing_common
 )
 
-char = alphanums + "_"
+char = alphanums + "_."
 identifier = Word(char)
 string_const = (sglQuotedString | dblQuotedString).addParseAction(removeQuotes)
 number_const = (pyparsing_common.number | pyparsing_common.fnumber)
