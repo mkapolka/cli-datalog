@@ -2,13 +2,14 @@
 import argparse
 import pandas as pd
 
-from .query import DEFAULT_OPERATORS, join_op, Var, Const
+from .predicates import DEFAULT_PREDICATES
+from .query import join_op, Var, Const
 from .parsing import query
 
 class Interpreter(object):
     def __init__(self):
         # Add builtin predicates
-        self.predicates = dict(DEFAULT_OPERATORS)
+        self.predicates = dict(DEFAULT_PREDICATES)
 
     def perform_query(self, query_string):
         q = query.parseString(query_string)
@@ -29,7 +30,11 @@ class Interpreter(object):
             operator = self.predicates.get(part.identifier, None)
             if not operator:
                 raise Exception("Can't find operator named '%s'" % part.identifier)
-            df = operator(negated, df, *pargs, **kwargs)
+            try:
+                df = operator(negated, df, *pargs, **kwargs)
+            except Exception as e:
+                print("Error in predicate %s: %s" % (part.identifier, e))
+                return
 
     # Adds a predicate to this environment.
     def add_predicate(self, name, f):

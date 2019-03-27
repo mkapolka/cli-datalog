@@ -111,7 +111,7 @@ def queryable(query_keys=None, available_keys=None, query=None, args=None):
         # Check for unknown keys and raise.
         unknown_args = {k for k in kwargs.keys() if k not in query_keys and k not in available_keys}
         if unknown_args:
-            raise Exception("Unknown args: %s" % ', '.join(unknown_args))
+            raise Exception("Unknown arg[s]: %s" % ', '.join(unknown_args))
 
         qdf = resolve_kwargs(df, kwargs)
         result = query(qdf)
@@ -155,36 +155,3 @@ def filter_op(f):
             take.append(r)
         return df[take]
     return op
-
-def csv_op(neg, df, *args, **kwargs):
-    print(resolve_args(df, args).to_csv(header=False, index=False))
-    return df
-
-def print_op(neg, df, *args, **kwargs):
-    print(df)
-    return df
-
-def csv_input_op(neg, df, filename, *args, **kwargs):
-    if neg:
-        raise Exception("Negation not supported for csv.read")
-    filename = filename.value()
-
-    # constant values
-    const_df = pd.DataFrame([{i: a.value() for i, a in enumerate(args) if not a.is_var()}])
-    const_df = const_df.assign(key=0)
-
-    file_df = pd.read_csv(filename, header=None, dtype=str)
-    file_df = file_df.assign(key=0)
-
-    file_df = file_df.merge(const_df, how="inner")
-    file_df = file_df.rename(columns={i: a.value() for i, a in enumerate(args) if a.is_var()})
-    return df.merge(file_df, how="inner")
-
-DEFAULT_OPERATORS = {
-    "print": print_op,
-    "eq": filter_op(lambda x, y: x == y),
-    "neq": filter_op(lambda x, y: x == y),
-    "gt": filter_op(lambda x, y: float(x) > float(y)),
-    "csv": csv_op,
-    "csv.read": csv_input_op,
-}
