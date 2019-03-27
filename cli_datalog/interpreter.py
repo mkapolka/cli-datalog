@@ -5,34 +5,13 @@ import pandas as pd
 from .query import DEFAULT_OPERATORS, join_op, Var, Const
 from .parsing import query
 
-class Main(object):
+class Interpreter(object):
     def __init__(self):
         # Add builtin predicates
         self.predicates = dict(DEFAULT_OPERATORS)
 
-        # Setup the default argument parser
-        self.parser = argparse.ArgumentParser(description="Parse some thangs")
-        self.parser.add_argument("query", type=str, help="Query string.")
-        self.parser.add_argument("--input", type=str, help="Input file. Format as CSV and it'll be available as input()s")
-
-    def get_argparser(self):
-        return self.parser
-
-    def main(self):
-        args = self.parser.parse_args()
-        input_file = args.input
-        query_string = args.query
-
+    def perform_query(self, query_string):
         q = query.parseString(query_string)
-
-        INPUT = pd.DataFrame(dtype=str)
-        if input_file is not None:
-            with open(input_file, 'r') as f:
-                lines = [f.strip().split(",") for f in f.readlines()]
-                columns = [str(x) for x in range(len(lines[0]))]
-                INPUT = pd.DataFrame(lines, columns=columns, dtype=str)
-
-        self.add_predicate("input", join_op(INPUT))
 
         df = pd.DataFrame([{"key": 0}])
 
