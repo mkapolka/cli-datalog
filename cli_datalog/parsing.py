@@ -1,15 +1,17 @@
 from pyparsing import (
-    Word, alphanums, Literal, delimitedList, Group, Optional,
+    Word, alphanums, Literal, delimitedList, Group, Optional, alphas,
     sglQuotedString, dblQuotedString, removeQuotes,
     pyparsing_common
 )
 
 char = alphanums + "_.-!?"
 identifier = Word(char)
-string_const = (sglQuotedString | dblQuotedString).addParseAction(removeQuotes)
+var = Word(alphas.upper(), alphas.lower())
+unquotedString = Word(alphas.lower(), alphanums)
+string_const = (sglQuotedString | dblQuotedString).addParseAction(removeQuotes) | unquotedString
 number_const = (pyparsing_common.number | pyparsing_common.fnumber)
 const = string_const | number_const
-atom = Group(const("const") | identifier("var"))
+atom = Group(const("const") | var("var"))
 kwarg = Group(identifier("name") + Literal("=") + atom("value"))
 parg = Group(atom("atom"))
 arg = Group(kwarg("kwarg") | parg("parg"))
