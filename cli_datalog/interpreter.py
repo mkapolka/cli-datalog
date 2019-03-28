@@ -36,6 +36,8 @@ class Interpreter(object):
                 print("Error in predicate %s: %s" % (part.identifier, e))
                 return
 
+        print(df.drop('key', axis=1))
+
     # Adds a predicate to this environment.
     def add_predicate(self, name, f):
         if name not in self.predicates:

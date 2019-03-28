@@ -1,7 +1,11 @@
 import pandas as pd
 from .query import filter_op, resolve_args
 
-def csv_op(neg, df, *args, **kwargs):
+def csv_output_op(neg, df, filename, *args, **kwargs):
+    if filename.is_var():
+        raise Exception("`filename` must be constant.")
+
+    filename = filename.value()
     print(resolve_args(df, args).to_csv(header=False, index=False))
     return df
 
@@ -28,8 +32,7 @@ def csv_input_op(neg, df, filename, *args, **kwargs):
 DEFAULT_PREDICATES = {
     "print": print_op,
     "eq": filter_op(lambda x, y: x == y),
-    "neq": filter_op(lambda x, y: x == y),
     "gt": filter_op(lambda x, y: float(x) > float(y)),
-    "csv": csv_op,
+    "csv.write": csv_output_op,
     "csv.read": csv_input_op,
 }
